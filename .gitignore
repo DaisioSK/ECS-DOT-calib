@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+.venv/
+.mypy_cache/
+.pytest_cache/
+
+# VS Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/launch.json
+!.vscode/tasks.json
+
+# Data & Models（大文件不进 Git，示例小样本可放 data/samples）
+data/raw/
+data/processed/
+models/engines/
+models/calib/
+*.engine
+*.plan
+*.onnx.cache
+*.cache
+
+# Logs & Reports
+logs/
+*.log
+reports/*.json
+reports/*.csv
+
+# Docker
+docker/*.local.*
