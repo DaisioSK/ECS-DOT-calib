@@ -16,6 +16,8 @@ ENV DEBIAN_FRONTEND=noninteractive \
     LC_ALL=C.UTF-8 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 
+ENV PATH=/usr/src/tensorrt/bin:${PATH}
+
 # ========= 4) 系统依赖（按需精简；最后清理 apt 缓存减镜像体积） =========
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
@@ -26,7 +28,7 @@ RUN apt-get update && \
 
 # ========= 5) 工作目录与 alias（系统级 bashrc，所有交互 shell 生效） =========
 WORKDIR /workspace
-RUN printf "alias ll='ls -alF'\nalias la='ls -A'\nalias l='ls -CF'\n" >> /etc/bash.bashrc
+RUN printf "alias ll='ls -alF'\nalias la='ls -A'\nalias l='ls -CF'\nalias py='python'\n" >> /etc/bash.bashrc
 
 # ========= 6) 修复 “I have no name!”（为宿主 UID/GID 建账户，家目录设为 /workspace） =========
 # 构建时传入宿主的 UID/GID：--build-arg HOST_UID=$(id -u) --build-arg HOST_GID=$(id -g)
@@ -37,6 +39,9 @@ RUN if ! getent group ${HOST_GID} >/dev/null; then groupadd -g ${HOST_GID} hostg
       useradd -u ${HOST_UID} -g ${HOST_GID} -d /workspace -s /bin/bash hostuser; fi
 
 # ========= 7) Python 依赖安装（空 requirements.txt 也不会报错） =========
+# 修复 python 默认指向 2.7 的问题
+RUN update-alternatives --install /usr/bin/python python /usr/bin/python3 10
+
 # 只拷贝锁定文件，提高缓存命中率；你用 pip-tools 生成的 requirements.txt 放仓库根
 COPY requirements.txt /tmp/requirements.txt
 RUN python3 -m pip install -U pip wheel setuptools && \

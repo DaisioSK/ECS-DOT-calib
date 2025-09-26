@@ -4,6 +4,7 @@ TAG         ?= dev
 NAME        ?= trt_dev
 PROJECT_DIR ?= $(HOME)/Documents/emass/pipe_trt_engine
 BASE_IMAGE  ?= nvcr.io/nvidia/l4t-ml:r35.2.1-py3
+PY          ?= python3
 
 UID         := $(shell id -u)
 GID         := $(shell id -g)
@@ -73,4 +74,17 @@ vars:
 	@echo PROJECT_DIR=$(PROJECT_DIR)
 	@echo BASE_IMAGE=$(BASE_IMAGE)
 	@echo UID=$(UID) GID=$(GID) VCS_REF=$(VCS_REF)
+
+# 在容器里执行任意命令：make exec CMD="python scripts/run_infer.py --cfg configs/runtime/gpu_fp16.yaml"
+exec:
+	@$(MAKE) -s up
+	@if [ -z "$(CMD)" ]; then \
+		echo "Usage: make exec CMD='<command inside container>'"; exit 1; \
+	fi
+	docker exec -it $(NAME) bash -lc 'cd /workspace && $(CMD)'
+
+# 常见的 trtexec 嫁接（示例）
+trtexec:
+	@$(MAKE) -s up
+	docker exec -it $(NAME) bash -lc 'trtexec --help | head -n 30'
 
