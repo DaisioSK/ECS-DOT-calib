@@ -1,0 +1,31 @@
+# Python 缓存
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+
+# 数据和模型（体积大/可再生成）
+data/
+models/engines/
+models/calib/
+*.engine
+*.plan
+*.onnx.cache
+*.cache
+
+# 日志和输出
+*.log
+reports/*.json
+reports/*.csv
+
+# IDE 配置（保留项目内的模板配置）
+.vscode/*
+!.vscode/settings.json
+!.vscode/launch.json
+!.vscode/tasks.json
+
+# 私密配置
+.env
+.env.*
+
