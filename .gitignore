@@ -31,3 +31,14 @@ reports/*.csv
 
 # Docker
 docker/*.local.*
+
+# Claude Code
+.claude*
+.npm*
+
+# Bash history
+.bash_history
+
+# env file
+.env
+

@@ -26,6 +26,14 @@ RUN apt-get update && \
       libglib2.0-0 libsm6 libxext6 libxrender1 \
     && rm -rf /var/lib/apt/lists/*
 
+# ========= (可选) 安装 Node.js + Claude CLI（仅容器内使用） =========
+ARG NODE_MAJOR=20
+RUN curl -fsSL https://deb.nodesource.com/setup_${NODE_MAJOR}.x | bash - \
+ && apt-get install -y --no-install-recommends nodejs \
+ && npm install -g @anthropic-ai/claude-code \
+ && npm cache clean --force \
+ && rm -rf /var/lib/apt/lists/*
+
 # ========= 5) 工作目录与 alias（系统级 bashrc，所有交互 shell 生效） =========
 WORKDIR /workspace
 RUN printf "alias ll='ls -alF'\nalias la='ls -A'\nalias l='ls -CF'\nalias py='python'\n" >> /etc/bash.bashrc
