@@ -1,0 +1,24 @@
+project:
+  name: cifar10
+
+model:
+  onnx: models/onnx/cifar10_simplecnn.onnx
+  input_shape: "1x3x32x32"
+  workspace_mb: 1024
+
+calibration:
+  algo: minmax            # minmax | entropy
+  npz: data/calib/cifar10_calib.npz
+  max_batches: null
+  force: false
+  sanity_n: 0
+  verbose: false
+
+build:
+  engine_out: models/engines
+  calib_out: models/calib
+
+eval:
+  npz: data/eval/cifar10_eval.npz
+  batch_size: 32
+  outdir: reports

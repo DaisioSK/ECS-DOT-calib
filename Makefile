@@ -9,6 +9,7 @@ PY          ?= python3
 UID         := $(shell id -u)
 GID         := $(shell id -g)
 VCS_REF     := $(shell git rev-parse --short HEAD 2>/dev/null || echo unknown)
+FIX_DIRS  	?= /workspace/models /workspace/reports
 
 BUILD_ARGS  := --build-arg BASE_IMAGE=$(BASE_IMAGE) \
                --build-arg HOST_UID=$(UID) \
@@ -47,7 +48,6 @@ up:
 	  -e NVIDIA_DRIVER_CAPABILITIES=all \
 	  -v $(PROJECT_DIR):/workspace:rw \
 	  -w /workspace \
-	  --user $(UID):$(GID) \
 	  --name $(NAME) \
 	  --label seakon.trt=1 \
 	  $(IMAGE):$(TAG) \
@@ -58,9 +58,10 @@ in:
 	@$(MAKE) -s up
 	docker exec -it $(NAME) bash
 
-down:
-	-@docker rm -f $(NAME) >/dev/null 2>&1 && echo "[make] $(NAME) removed." || echo "[make] $(NAME) not running."
-
+down: fix-perms
+	-@docker rm -f $(NAME) 2>/dev/null || true
+	@echo "[make] $(NAME) down."
+	
 logs:
 	docker logs -f $(NAME)
 
@@ -88,3 +89,13 @@ trtexec:
 	@$(MAKE) -s up
 	docker exec -it $(NAME) bash -lc 'trtexec --help | head -n 30'
 
+# 把产物改回宿主的 UID/GID，避免 root 拥有
+# 在容器内用 root 执行 chown；容器不存在时静默忽略
+fix-perms:
+	-@docker exec -u root $(NAME) bash -lc '\
+	  for d in $(FIX_DIRS); do \
+	    if [ -d $$d ]; then \
+	      echo "[fix-perms] chown -R $(UID):$(GID) $$d"; \
+	      chown -R $(UID):$(GID) $$d || true; \
+	    fi; \
+	  done' 2>/dev/null || true

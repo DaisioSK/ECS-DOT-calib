@@ -26,8 +26,7 @@ models/calib/
 # Logs & Reports
 logs/
 *.log
-reports/*.json
-reports/*.csv
+reports/
 
 # Docker
 docker/*.local.*
