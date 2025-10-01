@@ -1,1 +1,4 @@
-
+numpy==1.21.1
+PyYAML>=6
+scikit_learn==1.2.1
+pycuda==2022.2.2

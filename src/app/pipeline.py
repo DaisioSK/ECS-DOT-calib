@@ -9,15 +9,10 @@ Usage:
   python -m src.app.pipeline --cfg configs/cifar10_int8.yaml
 """
 
-import argparse, json, os, sys, time
+import argparse, json, time
 from pathlib import Path
-
-# -------- imports from your moved modules --------
-# 你将把现有脚本中的函数原封不动放到这些模块里（见第3节“搬家清单”）
-from src.core.build_int8 import build_int8_engine          # unchanged body
-from src.app.eval_api import run_eval_on_npz               # thin wrapper you’ll create
-# （export_txt_json 已在 build_int8_engine 里被调用；不用在这里再调）
-
+from src.core.build_int8 import build_int8_engine
+from src.app.eval_api import run_eval_on_npz
 
 
 # -------- tiny utils (keep local to stay simple) --------

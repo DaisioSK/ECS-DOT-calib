@@ -18,13 +18,11 @@ ENV DEBIAN_FRONTEND=noninteractive \
 
 ENV PATH=/usr/src/tensorrt/bin:${PATH}
 
-# ========= 4) 系统依赖（按需精简；最后清理 apt 缓存减镜像体积） =========
+# ========= 4) 系统依赖（根据apt-packages.txt安装apt包；最后清理 apt 缓存减镜像体积） =========
+COPY docker/apt-packages.txt /tmp/apt.txt
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-      vim less nano curl ca-certificates git \
-      pkg-config build-essential \
-      libglib2.0-0 libsm6 libxext6 libxrender1 \
-    && rm -rf /var/lib/apt/lists/*
+    xargs -a /tmp/apt.txt apt-get install -y --no-install-recommends && \
+    rm -rf /var/lib/apt/lists/*
 
 # ========= (可选) 安装 Node.js + Claude CLI（仅容器内使用） =========
 ARG NODE_MAJOR=20
@@ -47,14 +45,16 @@ RUN if ! getent group ${HOST_GID} >/dev/null; then groupadd -g ${HOST_GID} hostg
       useradd -u ${HOST_UID} -g ${HOST_GID} -d /workspace -s /bin/bash hostuser; fi
 
 # ========= 7) Python 依赖安装（空 requirements.txt 也不会报错） =========
-# 修复 python 默认指向 2.7 的问题
+# let python point to version 3.10
 RUN update-alternatives --install /usr/bin/python python /usr/bin/python3 10
+# resovle git dubious ownership
+RUN git config --system --add safe.directory /workspace
 
 # 只拷贝锁定文件，提高缓存命中率；你用 pip-tools 生成的 requirements.txt 放仓库根
 COPY requirements.txt /tmp/requirements.txt
 RUN python3 -m pip install -U pip wheel setuptools && \
     if grep -q '[^[:space:]]' /tmp/requirements.txt; then \
-      python3 -m pip install -r /tmp/requirements.txt; \
+      python3 -m pip install --no-cache-dir --ignore-installed -r /tmp/requirements.txt; \
     else \
       echo "requirements.txt is empty; skip pip install"; \
     fi && \

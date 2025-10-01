@@ -1,0 +1,14 @@
+vim
+less
+nano
+curl
+tree
+ca-certificates
+git
+apt-utils
+pkg-config
+build-essential
+libglib2.0-0
+libsm6
+libxext6
+libxrender1
