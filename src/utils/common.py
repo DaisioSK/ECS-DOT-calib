@@ -1,4 +1,8 @@
+import time
 import numpy as np
+
+def nowstamp() -> str:
+    return time.strftime("%Y-%m-%dT%H-%M-%S")
 
 # ----------------- Verbose helper (NEW) -----------------
 def vprint(verbose: bool, *args, **kwargs):   # >>> NEW

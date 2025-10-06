@@ -49,6 +49,8 @@ RUN if ! getent group ${HOST_GID} >/dev/null; then groupadd -g ${HOST_GID} hostg
 RUN update-alternatives --install /usr/bin/python python /usr/bin/python3 10
 # resovle git dubious ownership
 RUN git config --system --add safe.directory /workspace
+# set git commit editor to vim
+RUN git config --global core.editor "vim -f -c 'setlocal ft=gitcommit tw=72 colorcolumn=73'"
 
 # 只拷贝锁定文件，提高缓存命中率；你用 pip-tools 生成的 requirements.txt 放仓库根
 COPY requirements.txt /tmp/requirements.txt

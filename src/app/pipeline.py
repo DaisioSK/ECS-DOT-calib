@@ -9,13 +9,13 @@ Usage:
   python -m src.app.pipeline --cfg configs/cifar10_int8.yaml
 """
 
-import argparse, json, time
+import argparse, json
 from pathlib import Path
 from src.core.build_int8 import build_int8_engine
-from src.app.eval_api import run_eval_on_npz
+from src.app.eval import run_eval_on_npz
+from src.utils.route import resolve, ensure_dir
+from src.utils.common import nowstamp
 
-
-# -------- tiny utils (keep local to stay simple) --------
 def load_cfg(p: str) -> dict:
     pth = Path(p)
     if not pth.exists():
@@ -26,20 +26,7 @@ def load_cfg(p: str) -> dict:
         return yaml.safe_load(txt) or {}
     except Exception:
         return json.loads(txt)
-
-def resolve(path_like: str) -> Path:
-    p = Path(path_like)
-    if p.is_absolute():
-        return p
-    return (Path(".").resolve() / p).resolve()
-
-def ensure_dir(p: Path):
-    p.mkdir(parents=True, exist_ok=True)
-
-def nowstamp() -> str:
-    return time.strftime("%Y-%m-%dT%H-%M-%S")
-
-
+    
 def main():
     ap = argparse.ArgumentParser("INT8 pipeline (single entry)")
     ap.add_argument("--cfg", required=True, help="YAML/JSON config path")

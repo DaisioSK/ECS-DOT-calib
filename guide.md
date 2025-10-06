@@ -17,3 +17,7 @@ reports/：评测/基准的 JSON/CSV 输出。
 docker/：Dockerfile 与相关脚本（后续再写）。
 
 .vscode/：工作区设置与调试配置（后续再放 settings/launch）。
+
+
+calib npz: need to have "img" key
+eval npz: need to have "img" and "label" key

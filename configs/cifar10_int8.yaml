@@ -3,11 +3,11 @@ project:
 
 model:
   onnx: models/onnx/cifar10_simplecnn.onnx
-  input_shape: "1x3x32x32"
-  workspace_mb: 1024
+  input_shape: "32x3x32x32"
+  workspace_mb: 256
 
 calibration:
-  algo: minmax            # minmax | entropy
+  algo: entropy            # minmax | entropy
   npz: data/calib/cifar10_calib.npz
   max_batches: null
   force: false

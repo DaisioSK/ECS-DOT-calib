@@ -21,10 +21,12 @@ class _BaseNPZCalibrator:
         arr = np.load(npz_path)["imgs"]
         if arr.ndim != 4:
             raise ValueError(f"npz imgs must be [N,C,H,W], got {arr.shape}")
-        # 数据集保持 float32 便于统计；上传前再转换为 in_dtype_np
+        
+        # convert dtype to float32 for data distribution stats. will be converted back to in_dtype_np before upload
         if arr.dtype != np.float32:
             arr = arr.astype(np.float32, copy=False)
 
+        # finalize samples
         total = arr.shape[0]
         usable = (total // self.batch_size) * self.batch_size
         if (max_calib_batches is not None) and (int(max_calib_batches) > 0):
@@ -36,7 +38,7 @@ class _BaseNPZCalibrator:
         self.data = np.ascontiguousarray(arr)
         self.idx = 0
 
-        # 按“上传 dtype”分配 pinned + device
+        # calculate bytes per batch upload, and assign pinned + device accordingly
         upload_itemsize = self.in_dtype_np.itemsize
         nbytes_upload = int(np.prod((self.batch_size,) + tuple(self.data.shape[1:]))) * upload_itemsize
         self.h_page = cuda.pagelocked_empty(nbytes_upload, dtype=np.uint8)
@@ -61,10 +63,9 @@ class _BaseNPZCalibrator:
         batch_fp32 = np.ascontiguousarray(self.data[self.idx:self.idx + self.batch_size], dtype=np.float32)
         self.idx += self.batch_size
 
-        # 打印观测（用 fp32，直观）：全局 amax & 每通道 amax（C 维）
+        # verbose review: global amax and amax per channel
         if self.verbose:
             amax_global = float(np.max(np.abs(batch_fp32)))
-            # 假设 NCHW；对 C 维聚合
             amax_per_ch = np.max(np.abs(batch_fp32), axis=(0, 2, 3))
             print(f"[Calib] get_batch called for inputs={list(names)}")
             print(f"[Calib] get_batch idx=[{self.idx - self.batch_size}:{self.idx}) shape={batch_fp32.shape}")
@@ -73,12 +74,14 @@ class _BaseNPZCalibrator:
                 preview = np.array2string(amax_per_ch[:min(10, amax_per_ch.size)], precision=4, separator=' ')
                 print(f"[Calib] batch amax_per_channel(first 10)={preview}")
 
-        # —— 上传用期望 dtype —— #
+        # cast FP32 (for stats) -> model input dtype; then take uint8 view for raw byte copy only
         batch_upload = np.ascontiguousarray(batch_fp32.astype(self.in_dtype_np, copy=False))
         src = batch_upload.view(np.uint8)
         self.h_page[:src.nbytes] = src.ravel()
+
+        # async copy data from CPU to VRAM
         cuda.memcpy_htod_async(self.d_in, self.h_page, self.stream)
-        self.stream.synchronize()  # 避免异步竞态
+        self.stream.synchronize()
         return [int(self.d_in)]
 
     # cache I/O

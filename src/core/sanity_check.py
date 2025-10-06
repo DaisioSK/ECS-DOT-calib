@@ -2,14 +2,14 @@ import os
 import numpy as np
 import tensorrt as trt
 import pycuda.driver as cuda
-import pycuda.autoinit  # noqa: F401  # 初始化 CUDA 上下文，便于快速跑 INT8/FP32 对比
+import pycuda.autoinit  # noqa: F401  # quick init
 from src.utils.common import vprint, cosine_sim
 
 
 def trt_run(engine_path, X):
     """
-    执行给定 TensorRT engine，严格按 binding 的真实 dtype/shape 分配显存和 host 内存，
-    然后把输出安全地转成 float32 返回。
+    Execute given tensorRT engine with given dtype/shape. 
+    Output in FP32
     """
     logger = trt.Logger(trt.Logger.ERROR)
 
@@ -71,7 +71,8 @@ def trt_run(engine_path, X):
     return h_out.astype(np.float32, copy=False)
 
 
-def sanity_compare_fp32_vs_int8(onnx, int8_engine, npz, B, C, H, W, N=32, verbose=False):  # >>> CHANGED
+# use a small sample to perform CosineSim comparison between INT8 logits and FP32 logits
+def sanity_compare_fp32_vs_int8(onnx, int8_engine, npz, B, C, H, W, N=32, verbose=False): 
 
     logger = trt.Logger(trt.Logger.ERROR)
     builder = trt.Builder(logger)
@@ -100,6 +101,6 @@ def sanity_compare_fp32_vs_int8(onnx, int8_engine, npz, B, C, H, W, N=32, verbos
     if y_int8.ndim > 2: y_int8 = y_int8.reshape(y_int8.shape[0], -1)
     if y_fp32.ndim > 2: y_fp32 = y_fp32.reshape(y_fp32.shape[0], -1)
     cs = cosine_sim(y_int8, y_fp32)
-    print(f"[Sanity] CosineSim(INT8 vs FP32) on {M} samples: {cs:.4f} (>=0.95 正常；<0.7 多半是早期崩)")
+    print(f"[Sanity] CosineSim(INT8 vs FP32) on {M} samples: {cs:.4f} (>=0.95 Good; <0.7 Bad)")
     os.remove(fp32_path)
     vprint(verbose, f"[Sanity] done. tmp fp32 engine removed: {fp32_path}")

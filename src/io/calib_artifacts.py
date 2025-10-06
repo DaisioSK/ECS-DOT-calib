@@ -2,13 +2,13 @@ import os, re, json, struct
 import numpy as np
 from src.utils.common import vprint, be_hex_float, sanitize_scale
 
+# parse cache to true scales -> export with ranges_dict
 def parse_trt_calib_cache_to_scales(cache_path: str, verbose: bool = False):
     """
-    解析 TensorRT calibration cache，提取原始浮点 raw_f，并打印两种解释：
-      (A) 作为 scale 使用: scale_as_is = raw_f
-      (B) 作为 amax 使用:  scale_from_amax = raw_f / 127.0   # symmetric int8
-    函数返回值保持不变：沿用 (B) 的结果 {name: raw_f/127.0}，仅新增 verbose 观测信息。
+    Analyze TensorRT calibration cache, and translate raw float numbers into scale
     """
+
+    # read cache
     if not os.path.exists(cache_path):
         raise FileNotFoundError(f"calibration cache not found: {cache_path}")
 
@@ -19,6 +19,7 @@ def parse_trt_calib_cache_to_scales(cache_path: str, verbose: bool = False):
     except Exception:
         txt = raw.decode("latin-1", errors="ignore")
 
+    # extract info from cache file
     pat = re.compile(r"^([^:]+):\s*([0-9a-fA-F]{8})\s*$")
     lines = [ln.strip() for ln in txt.splitlines() if ln.strip()]
 
@@ -46,8 +47,13 @@ def parse_trt_calib_cache_to_scales(cache_path: str, verbose: bool = False):
             skipped += 1
             continue
 
+        # translation from cache number (amax) to scale -> divide by 127
         raw_map[name] = float(raw_f)
-        scales[name] = float(raw_f) / 127.0  # 【保持原行为】：当作 amax，再除以 127 得 scale
+        scales[name] = float(raw_f) / 127.0
+
+        # if cache number is scale, use this instead
+        # scales[name] = raw_f
+        
 
     vprint(verbose, f"[Cache] parsed entries: {len(scales)}, skipped={skipped}")
     if verbose and raw_map:
@@ -63,15 +69,15 @@ def parse_trt_calib_cache_to_scales(cache_path: str, verbose: bool = False):
 
 def export_txt_json_from_profile(network, header, txt_path, json_path, ranges_dict=None):
     """
-    从 network 的层输出张量名导出：
-      txt: header + "name: hex_be"
-      json: { name: {scale: float, min:0, max:0, offset:0}, ... }
-    注意：TRT Python API 不直接给出每层 dynamic range；此处以 1.0 作为保底，
-    你若用 trtexec --exportProfile 或其他方式拿到了真实 amax，可填到 ranges_dict。
+    Receive scales from param {ranges_dict} and output in
+      - txt format: header + "name: hex_be"
+      - json format: { name: {scale: float, min:0, max:0, offset:0}, ... }
+    Note: default scale is 1.0 if no data provided 
     """
     items = []
     jroot = {}
-    # 先网络输入
+
+    # network output
     for i in range(network.num_inputs):
         inp = network.get_input(i)
         if inp and inp.name:
@@ -80,7 +86,7 @@ def export_txt_json_from_profile(network, header, txt_path, json_path, ranges_di
                 sc = sanitize_scale(ranges_dict[inp.name], fallback=1.0)
             items.append((inp.name, sc))
 
-    # 再各层输出
+    # layers output
     for i in range(network.num_layers):
         layer = network.get_layer(i)
         for oi in range(layer.num_outputs):
