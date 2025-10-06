@@ -42,3 +42,5 @@ docker/*.local.*
 # env file
 .env
 
+*.npz
+data/eval/
