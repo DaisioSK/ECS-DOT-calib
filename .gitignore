@@ -14,10 +14,11 @@ __pycache__/
 !.vscode/tasks.json
 
 # Data & Models（大文件不进 Git，示例小样本可放 data/samples）
-data/raw/
-data/processed/
+data/calib/
+data/eval/
 models/engines/
 models/calib/
+models/onnx
 *.engine
 *.plan
 *.onnx.cache
