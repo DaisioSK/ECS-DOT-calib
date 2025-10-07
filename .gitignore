@@ -23,6 +23,7 @@ models/onnx
 *.plan
 *.onnx.cache
 *.cache
+*.npz
 
 # Logs & Reports
 logs/
@@ -42,5 +43,3 @@ docker/*.local.*
 # env file
 .env
 
-*.npz
-data/eval/
