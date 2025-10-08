@@ -99,3 +99,6 @@ fix-perms:
 	      chown -R $(UID):$(GID) $$d || true; \
 	    fi; \
 	  done' 2>/dev/null || true
+
+# nvdla virtual platform commands. only use onder x86
+include nvdla_vp/nvdla_vp.mk
