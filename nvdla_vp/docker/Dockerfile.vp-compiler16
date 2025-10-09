@@ -1,0 +1,25 @@
+# Dockerfile.vp-compiler.xenial — 最小变更，规避 PIE
+FROM ubuntu:16.04
+
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    build-essential git pkg-config python python-dev \
+    protobuf-compiler libprotobuf-dev libgoogle-glog-dev \
+    libboost-all-dev libyaml-cpp-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /root
+RUN git clone https://github.com/nvdla/sw.git
+WORKDIR /root/sw/umd
+
+# 没有 clean 目标，直接清理生成物
+RUN rm -rf out
+
+# 官方建议的入口：在 umd 目录下导出 TOP 再编译 compiler
+RUN export TOP=$(pwd) && make -j"$(nproc)" compiler
+
+# 收集产物
+RUN mkdir -p /opt/nvdla && \
+    find /root/sw -type f -name "nvdla_compiler" -exec cp {} /opt/nvdla/ \; && \
+    find /root/sw -type f -name "nvdla_emit"     -exec cp {} /opt/nvdla/ \; || true
+
+ENV PATH="/opt/nvdla:${PATH}"
