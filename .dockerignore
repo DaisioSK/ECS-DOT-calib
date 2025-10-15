@@ -13,6 +13,7 @@ models/calib/
 *.plan
 *.onnx.cache
 *.cache
+*.onnx
 
 # 日志和输出
 *.log

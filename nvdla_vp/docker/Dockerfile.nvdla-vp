@@ -1,0 +1,109 @@
+FROM nvdla/vp
+
+# ---------- 可配置参数（build时可 --build-arg 覆盖，运行时仍可 -e SC_LOG 覆盖） ----------
+ARG ROOT_DIR="/usr/local/nvdla"
+ARG NVDLA_VER="nv_full"
+ARG SC_LOG_DIR="/usr/local/nvdla/host/logs/sc.log"
+ARG SC_LOG_LVL="sc_debug"
+
+# ========= 1. 安装编译依赖 =========
+RUN apt-get update && apt-get install -y \
+    git build-essential automake autoconf libtool pkg-config tree \
+    cmake ninja-build \
+    libglib2.0-dev libpixman-1-dev libfdt-dev python ca-certificates \
+    libboost-dev python-dev liblua5.2-dev swig libcap-dev libattr1-dev  \
+ && rm -rf /var/lib/apt/lists/*
+
+# 兼容很多脚本默认找 /usr/local/systemc-2.3.0
+RUN mkdir -p /usr/local/systemc-2.3.0/include /usr/local/systemc-2.3.0/lib && \
+    if [ -d /usr/include/systemc ]; then ln -sf /usr/include/systemc /usr/local/systemc-2.3.0/include/systemc; fi && \
+    sh -c 'for f in /usr/lib/*/libsystemc* /usr/lib/libsystemc*; do [ -e "$f" ] && ln -sf "$f" /usr/local/systemc-2.3.0/lib/; done || true'
+
+# ========= 2. Clone 源码 =========
+WORKDIR ${ROOT_DIR}
+RUN git clone https://github.com/nvdla/hw.git
+RUN git clone https://github.com/nvdla/vp.git
+
+# ========= 3. 全局把 git:// 改写为 https://（避免 9418 端口/内网限制）=========
+RUN git config --global url."https://github.com/qemu/".insteadOf git://git.qemu-project.org/ && \
+    git config --global url."https://github.com/qemu/".insteadOf git://git.qemu.org/ && \
+    git config --global url."https://github.com/".insteadOf git://github.com/ && \
+    git config --global protocol.file.allow always
+
+# ========= 4. 子模块初始化（分两段：先拉顶层，再修 URL，再递归）=========
+WORKDIR ${ROOT_DIR}/vp
+# 4.1 先只拉顶层（不递归），拿到 qbox
+RUN git submodule sync --recursive && \
+    git submodule update --init libs/greenlib libs/tlm2c libs/qbox models/cpu models/memory
+
+# 4.2 修正 qbox 里的各个 git:// 子模块为 https://
+RUN cd libs/qbox && \
+    git submodule sync && \
+    sed -i 's#git://git.qemu-project.org/dtc.git#https://github.com/qemu/dtc.git#g' .gitmodules || true && \
+    sed -i 's#git://anongit.freedesktop.org/pixman#https://gitlab.freedesktop.org/pixman/pixman.git#g' .gitmodules || true && \
+    sed -i 's#git://git.qemu.org/QemuMacDrivers.git#https://github.com/qemu/QemuMacDrivers.git#g' .gitmodules || true && \
+    sed -i 's#git://git.qemu-project.org/SLOF.git#https://github.com/qemu/SLOF.git#g' .gitmodules || true && \
+    sed -i 's#git://git.qemu-project.org/ipxe.git#https://github.com/qemu/ipxe.git#g' .gitmodules || true && \
+    sed -i 's#git://git.qemu-project.org/openbios.git#https://github.com/qemu/openbios.git#g' .gitmodules || true && \
+    sed -i 's#git://git.qemu-project.org/openhackware.git#https://github.com/qemu/openhackware.git#g' .gitmodules || true && \
+    sed -i 's#git://github.com/rth7680/qemu-palcode.git#https://github.com/rth7680/qemu-palcode.git#g' .gitmodules || true && \
+    sed -i 's#git://git.qemu-project.org/seabios.git/#https://github.com/qemu/seabios.git#g' .gitmodules || true && \
+    sed -i 's#git://git.qemu-project.org/sgabios.git#https://github.com/qemu/sgabios.git#g' .gitmodules || true && \
+    sed -i 's#git://git.qemu.org/skiboot.git#https://github.com/qemu/skiboot.git#g' .gitmodules || true && \
+    sed -i 's#git://git.qemu-project.org/u-boot.git#https://github.com/u-boot/u-boot.git#g' .gitmodules || true && \
+    sed -i 's#git://git.qemu-project.org/vgabios.git/#https://github.com/qemu/vgabios.git#g' .gitmodules || true && \
+    git submodule sync
+
+# 4.3 现在再做递归更新（不加 --jobs，兼容老 git）
+RUN git -c http.lowSpeedLimit=1 -c http.lowSpeedTime=600 submodule update --init --recursive
+
+# ========= 5. 编译 hw 和 vp =========
+# ---------- 构建 hw（产出 CMOD） ----------
+WORKDIR ${ROOT_DIR}/hw
+# 第一次 make 会生成 tree.make；用 sed 强制设置 PROJECTS 和 SYSTEMC 路径，确保一致
+RUN yes "" | make -j"$(nproc)" && \
+    sed -i "s#^PROJECTS .*#PROJECTS := ${NVDLA_VER}#g" tree.make && \
+    sed -i "s#^SYSTEMC .*#SYSTEMC := /usr/local/systemc-2.3.0#g" tree.make && \
+    ./tools/bin/tmake -build cmod_top
+
+
+# ---------- 构建 vp（用 CMake 指向 CMOD+SystemC） ----------
+WORKDIR ${ROOT_DIR}/vp
+RUN mkdir -p build
+WORKDIR ${ROOT_DIR}/vp/build
+RUN cmake .. \
+      -G "Unix Makefiles" \
+      -DCMAKE_INSTALL_PREFIX=build \
+      -DCMAKE_BUILD_TYPE=Debug \
+      -DSYSTEMC_PREFIX=/usr/local/systemc-2.3.0 \
+      -DNVDLA_HW_PREFIX=${ROOT_DIR}/hw \
+      -DNVDLA_HW_PROJECT=${NVDLA_VER} \
+      -DCMAKE_CXX_STANDARD=11 && \
+    \
+    # 让 SWIG 在 build 树能找到接口文件 & 头文件（相对路径 ../gsp_sc.i 与 ../include/...）
+    mkdir -p libs/greenlib/greenscript && \
+    ln -sfn ${ROOT_DIR}/vp/libs/greenlib/greenscript/gsp_sc.i \
+            libs/greenlib/greenscript/gsp_sc.i && \
+    ln -sfn ${ROOT_DIR}/vp/libs/greenlib/greenscript/include \
+            libs/greenlib/greenscript/include && \
+    \
+    # 先编 tlm2c
+    make -j"$(nproc)" tlm2c && \
+    \
+    # 补齐 qbox 期望的头文件布局：把头文件放到 <with_tlm2c>/include/
+    mkdir -p libs/tlm2c.build/include && \
+    cp -r ../libs/tlm2c/include/* libs/tlm2c.build/include/ && \
+    # 把 build 的 tlm2c.build “投影”回源码树（qbox 会查 vp/libs/tlm2c.build）
+    ln -sfn ${ROOT_DIR}/vp/build/libs/tlm2c.build ${ROOT_DIR}/vp/libs/tlm2c.build && \
+    \
+    # 再编剩余目标；失败时降级到单线程并打印首错
+    ( make -j"$(nproc)" || (echo "[WARN] Parallel build failed. Retrying serial & verbose..." && make -j1 VERBOSE=1) ) && \
+    make install
+
+
+# ========= 6. 默认工作目录 =========
+WORKDIR ${ROOT_DIR}
+ENV SYSTEMC_PREFIX="/usr/local/systemc-2.3.0"
+ENV SC_SIGNAL_WRITE_CHECK=DISABLE
+ENV LD_LIBRARY_PATH="${ROOT_DIR}:${LD_LIBRARY_PATH}"
+ENV SC_LOG="outfile:${SC_LOG_DIR};verbosity_level:${SC_LOG_LVL};csb_adaptor:enable;dbb_adaptor:enable"

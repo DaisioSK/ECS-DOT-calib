@@ -1,50 +1,66 @@
-name: "SmallCifarCNN"
+name: "cifar_simplecnn"
 input: "data"
-input_shape { dim: 1 dim: 3 dim: 32 dim: 32 }  # NCHW
+input_shape { dim: 1 dim: 3 dim: 32 dim: 32 }
 
-# 显式特征层（恒等映射），强制走 feature 路径
-layer {
-  name: "feat0"
-  type: "Power"
-  bottom: "data"
-  top: "feat0"
-  power_param { power: 1.0 scale: 1.0 shift: 0.0 }
-}
-
-# Block 1: in 3x32x32 -> out 64x16x16
-layer { name: "conv1_1" type: "Convolution" bottom: "feat0" top: "conv1_1"
-  convolution_param { num_output: 32 kernel_size: 3 stride: 1 pad: 1 weight_filler { type: "xavier" } bias_filler { type: "constant" } } }
-layer { name: "relu1_1" type: "ReLU" bottom: "conv1_1" top: "conv1_1" }
-layer { name: "conv1_2" type: "Convolution" bottom: "conv1_1" top: "conv1_2"
-  convolution_param { num_output: 64 kernel_size: 3 stride: 1 pad: 1 weight_filler { type: "xavier" } bias_filler { type: "constant" } } }
-layer { name: "relu1_2" type: "ReLU" bottom: "conv1_2" top: "conv1_2" }
-layer { name: "pool1" type: "Pooling" bottom: "conv1_2" top: "pool1"
-  pooling_param { pool: MAX kernel_size: 2 stride: 2 } }
-
-# Block 2: 64x16x16 -> 128x8x8
-layer { name: "conv2_1" type: "Convolution" bottom: "pool1" top: "conv2_1"
-  convolution_param { num_output: 128 kernel_size: 3 stride: 1 pad: 1 weight_filler { type: "xavier" } bias_filler { type: "constant" } } }
-layer { name: "relu2_1" type: "ReLU" bottom: "conv2_1" top: "conv2_1" }
-layer { name: "conv2_2" type: "Convolution" bottom: "conv2_1" top: "conv2_2"
-  convolution_param { num_output: 128 kernel_size: 3 stride: 1 pad: 1 weight_filler { type: "xavier" } bias_filler { type: "constant" } } }
-layer { name: "relu2_2" type: "ReLU" bottom: "conv2_2" top: "conv2_2" }
-layer { name: "pool2" type: "Pooling" bottom: "conv2_2" top: "pool2"
-  pooling_param { pool: MAX kernel_size: 2 stride: 2 } }
-
-# Block 3: 128x8x8 -> 256x4x4
-layer { name: "conv3_1" type: "Convolution" bottom: "pool2" top: "conv3_1"
-  convolution_param { num_output: 256 kernel_size: 3 stride: 1 pad: 1 weight_filler { type: "xavier" } bias_filler { type: "constant" } } }
-layer { name: "relu3_1" type: "ReLU" bottom: "conv3_1" top: "conv3_1" }
-layer { name: "conv3_2" type: "Convolution" bottom: "conv3_1" top: "conv3_2"
-  convolution_param { num_output: 256 kernel_size: 3 stride: 1 pad: 1 weight_filler { type: "xavier" } bias_filler { type: "constant" } } }
-layer { name: "relu3_2" type: "ReLU" bottom: "conv3_2" top: "conv3_2" }
-layer { name: "pool3" type: "Pooling" bottom: "conv3_2" top: "pool3"
-  pooling_param { pool: MAX kernel_size: 2 stride: 2 } }
-
-# Flatten (256x4x4=4096) -> FC -> ReLU -> FC(10) -> Softmax
-layer { name: "fc1" type: "InnerProduct" bottom: "pool3" top: "fc1"
-  inner_product_param { num_output: 256 weight_filler { type: "xavier" } bias_filler { type: "constant" } } }
-layer { name: "relu_fc1" type: "ReLU" bottom: "fc1" top: "fc1" }
-layer { name: "fc2" type: "InnerProduct" bottom: "fc1" top: "fc2"
-  inner_product_param { num_output: 10 weight_filler { type: "xavier" } bias_filler { type: "constant" } } }
-layer { name: "prob" type: "Softmax" bottom: "fc2" top: "prob" }
+layer { name: "_features_features_0_net_net_0_Conv" type: "Convolution" bottom: "data" top: "_features_features_0_net_net_0_Conv"
+  convolution_param { num_output: 64 kernel_size: 3 stride: 1 pad: 1
+    bias_term: true
+    weight_filler { type: "xavier" }
+    bias_filler { type: "constant" }
+  } }
+layer { name: "relu__features_features_0_net_net_0_Conv" type: "ReLU" bottom: "_features_features_0_net_net_0_Conv" top: "_features_features_0_net_net_0_Conv" }
+layer { name: "_features_features_0_net_net_2_Conv" type: "Convolution" bottom: "_features_features_0_net_net_0_Conv" top: "_features_features_0_net_net_2_Conv"
+  convolution_param { num_output: 64 kernel_size: 3 stride: 1 pad: 1
+    bias_term: true
+    weight_filler { type: "xavier" }
+    bias_filler { type: "constant" }
+  } }
+layer { name: "relu__features_features_0_net_net_2_Conv" type: "ReLU" bottom: "_features_features_0_net_net_2_Conv" top: "_features_features_0_net_net_2_Conv" }
+layer { name: "_features_features_0_net_net_4_MaxPool" type: "Pooling" bottom: "_features_features_0_net_net_2_Conv" top: "_features_features_0_net_net_4_MaxPool"
+  pooling_param { pool: MAX kernel_size: 2 stride: 2 pad: 0 } }
+layer { name: "_features_features_1_net_net_0_Conv" type: "Convolution" bottom: "_features_features_0_net_net_4_MaxPool" top: "_features_features_1_net_net_0_Conv"
+  convolution_param { num_output: 64 kernel_size: 3 stride: 1 pad: 1
+    bias_term: true
+    weight_filler { type: "xavier" }
+    bias_filler { type: "constant" }
+  } }
+layer { name: "relu__features_features_1_net_net_0_Conv" type: "ReLU" bottom: "_features_features_1_net_net_0_Conv" top: "_features_features_1_net_net_0_Conv" }
+layer { name: "_features_features_1_net_net_2_Conv" type: "Convolution" bottom: "_features_features_1_net_net_0_Conv" top: "_features_features_1_net_net_2_Conv"
+  convolution_param { num_output: 64 kernel_size: 3 stride: 1 pad: 1
+    bias_term: true
+    weight_filler { type: "xavier" }
+    bias_filler { type: "constant" }
+  } }
+layer { name: "relu__features_features_1_net_net_2_Conv" type: "ReLU" bottom: "_features_features_1_net_net_2_Conv" top: "_features_features_1_net_net_2_Conv" }
+layer { name: "_features_features_1_net_net_4_MaxPool" type: "Pooling" bottom: "_features_features_1_net_net_2_Conv" top: "_features_features_1_net_net_4_MaxPool"
+  pooling_param { pool: MAX kernel_size: 2 stride: 2 pad: 0 } }
+layer { name: "_features_features_2_net_net_0_Conv" type: "Convolution" bottom: "_features_features_1_net_net_4_MaxPool" top: "_features_features_2_net_net_0_Conv"
+  convolution_param { num_output: 64 kernel_size: 3 stride: 1 pad: 1
+    bias_term: true
+    weight_filler { type: "xavier" }
+    bias_filler { type: "constant" }
+  } }
+layer { name: "relu__features_features_2_net_net_0_Conv" type: "ReLU" bottom: "_features_features_2_net_net_0_Conv" top: "_features_features_2_net_net_0_Conv" }
+layer { name: "_features_features_2_net_net_2_Conv" type: "Convolution" bottom: "_features_features_2_net_net_0_Conv" top: "_features_features_2_net_net_2_Conv"
+  convolution_param { num_output: 64 kernel_size: 3 stride: 1 pad: 1
+    bias_term: true
+    weight_filler { type: "xavier" }
+    bias_filler { type: "constant" }
+  } }
+layer { name: "relu__features_features_2_net_net_2_Conv" type: "ReLU" bottom: "_features_features_2_net_net_2_Conv" top: "_features_features_2_net_net_2_Conv" }
+layer { name: "_features_features_2_net_net_4_MaxPool" type: "Pooling" bottom: "_features_features_2_net_net_2_Conv" top: "_features_features_2_net_net_4_MaxPool"
+  pooling_param { pool: MAX kernel_size: 2 stride: 2 pad: 0 } }
+layer { name: "_classifier_classifier_0_Flatten" type: "Flatten" bottom: "_features_features_2_net_net_4_MaxPool" top: "flat" }
+layer { name: "_classifier_classifier_1_Gemm" type: "InnerProduct" bottom: "flat" top: "_classifier_classifier_1_Gemm"
+  inner_product_param { num_output: 256
+    bias_term: true
+    weight_filler { type: "xavier" }
+    bias_filler { type: "constant" }
+  } }
+layer { name: "relu__classifier_classifier_1_Gemm" type: "ReLU" bottom: "_classifier_classifier_1_Gemm" top: "_classifier_classifier_1_Gemm" }
+layer { name: "_classifier_classifier_3_Gemm" type: "InnerProduct" bottom: "_classifier_classifier_1_Gemm" top: "_classifier_classifier_3_Gemm"
+  inner_product_param { num_output: 256
+    bias_term: true
+    weight_filler { type: "xavier" }
+    bias_filler { type: "constant" }
+  } }

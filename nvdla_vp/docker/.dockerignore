@@ -1,0 +1,7 @@
+out/
+nvdla_vp/out/
+**/wisdom.dir
+.git
+__pycache__/
+*.pyc
+venv/

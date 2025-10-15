@@ -1,0 +1,49 @@
+FROM nvdla/vp
+
+ARG ROOT_DIR="/usr/local/nvdla"
+
+RUN apt-get update && apt-get install -y \
+    git build-essential automake autoconf libtool pkg-config tree \
+    cmake ninja-build \
+    libglib2.0-dev libpixman-1-dev libfdt-dev python ca-certificates \
+    libboost-dev python-dev liblua5.2-dev swig libcap-dev libattr1-dev  \
+ && rm -rf /var/lib/apt/lists/*
+
+WORKDIR ${ROOT_DIR}
+RUN git clone https://github.com/nvdla/hw.git
+RUN git clone https://github.com/nvdla/vp.git
+
+# ========= 3. 全局把 git:// 改写为 https://（避免 9418 端口/内网限制）=========
+RUN git config --global url."https://github.com/qemu/".insteadOf git://git.qemu-project.org/ && \
+    git config --global url."https://github.com/qemu/".insteadOf git://git.qemu.org/ && \
+    git config --global url."https://github.com/".insteadOf git://github.com/ && \
+    git config --global protocol.file.allow always
+
+# ========= 4. 子模块初始化（分两段：先拉顶层，再修 URL，再递归）=========
+WORKDIR ${ROOT_DIR}/vp
+# 4.1 先只拉顶层（不递归），拿到 qbox
+RUN git submodule sync --recursive && \
+    git submodule update --init libs/greenlib libs/tlm2c libs/qbox models/cpu models/memory
+
+# 4.2 修正 qbox 里的各个 git:// 子模块为 https://
+RUN cd libs/qbox && \
+    git submodule sync && \
+    sed -i 's#git://git.qemu-project.org/dtc.git#https://github.com/qemu/dtc.git#g' .gitmodules || true && \
+    sed -i 's#git://anongit.freedesktop.org/pixman#https://gitlab.freedesktop.org/pixman/pixman.git#g' .gitmodules || true && \
+    sed -i 's#git://git.qemu.org/QemuMacDrivers.git#https://github.com/qemu/QemuMacDrivers.git#g' .gitmodules || true && \
+    sed -i 's#git://git.qemu-project.org/SLOF.git#https://github.com/qemu/SLOF.git#g' .gitmodules || true && \
+    sed -i 's#git://git.qemu-project.org/ipxe.git#https://github.com/qemu/ipxe.git#g' .gitmodules || true && \
+    sed -i 's#git://git.qemu-project.org/openbios.git#https://github.com/qemu/openbios.git#g' .gitmodules || true && \
+    sed -i 's#git://git.qemu-project.org/openhackware.git#https://github.com/qemu/openhackware.git#g' .gitmodules || true && \
+    sed -i 's#git://github.com/rth7680/qemu-palcode.git#https://github.com/rth7680/qemu-palcode.git#g' .gitmodules || true && \
+    sed -i 's#git://git.qemu-project.org/seabios.git/#https://github.com/qemu/seabios.git#g' .gitmodules || true && \
+    sed -i 's#git://git.qemu-project.org/sgabios.git#https://github.com/qemu/sgabios.git#g' .gitmodules || true && \
+    sed -i 's#git://git.qemu.org/skiboot.git#https://github.com/qemu/skiboot.git#g' .gitmodules || true && \
+    sed -i 's#git://git.qemu-project.org/u-boot.git#https://github.com/u-boot/u-boot.git#g' .gitmodules || true && \
+    sed -i 's#git://git.qemu-project.org/vgabios.git/#https://github.com/qemu/vgabios.git#g' .gitmodules || true && \
+    git submodule sync
+
+# 4.3 现在再做递归更新（不加 --jobs，兼容老 git）
+RUN git -c http.lowSpeedLimit=1 -c http.lowSpeedTime=600 submodule update --init --recursive
+
+

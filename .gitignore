@@ -24,6 +24,12 @@ models/onnx
 *.onnx.cache
 *.cache
 *.npz
+*.onnx
+
+# images
+*.jpg
+*.pgm
+*.ppm
 
 # Logs & Reports
 logs/
@@ -42,4 +48,7 @@ docker/*.local.*
 
 # env file
 .env
+
+# nvdla related
+*.nvdla
 
