@@ -71,7 +71,7 @@ def trt_run(engine_path, X):
     return h_out.astype(np.float32, copy=False)
 
 
-# use a small sample to perform CosineSim comparison between INT8 logits and FP32 logits
+# use a small sample to perform CosineSim comparison between INT8 logits and FP32 logits. onnx only
 def sanity_compare_fp32_vs_int8(onnx, int8_engine, npz, B, C, H, W, N=32, verbose=False): 
 
     logger = trt.Logger(trt.Logger.ERROR)

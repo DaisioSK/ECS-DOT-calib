@@ -34,7 +34,7 @@ RUN curl -fsSL https://deb.nodesource.com/setup_${NODE_MAJOR}.x | bash - \
 
 # ========= 5) 工作目录与 alias（系统级 bashrc，所有交互 shell 生效） =========
 WORKDIR /workspace
-RUN printf "alias ll='ls -alF'\nalias la='ls -A'\nalias l='ls -CF'\nalias py='python'\n" >> /etc/bash.bashrc
+RUN printf "alias ll='ls -alF'\nalias la='ls -A'\nalias l='ls -CF'\nalias py='python3'\n" >> /etc/bash.bashrc
 
 # ========= 6) 修复 “I have no name!”（为宿主 UID/GID 建账户，家目录设为 /workspace） =========
 # 构建时传入宿主的 UID/GID：--build-arg HOST_UID=$(id -u) --build-arg HOST_GID=$(id -g)

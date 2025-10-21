@@ -2,9 +2,12 @@
 IMAGE       ?= trt_env
 TAG         ?= dev
 NAME        ?= trt_dev
-PROJECT_DIR ?= $(HOME)/Documents/emass/pipe_trt_engine
+# PROJECT_DIR ?= $(HOME)/Documents/emass/pipe_trt_engine
 BASE_IMAGE  ?= nvcr.io/nvidia/l4t-ml:r35.2.1-py3
 PY          ?= python3
+
+MAKEFILE_SELF   := $(abspath $(firstword $(MAKEFILE_LIST)))
+PROJECT_DIR     := $(abspath $(dir $(MAKEFILE_SELF)))
 
 UID         := $(shell id -u)
 GID         := $(shell id -g)
@@ -30,11 +33,7 @@ requirements.txt: requirements.in
 
 build: docker/Dockerfile requirements.txt
 	@echo "[make] building $(IMAGE):$(TAG) (BASE_IMAGE=$(BASE_IMAGE), VCS_REF=$(VCS_REF))"
-	docker build -f docker/Dockerfile $(BUILD_ARGS) -t $(IMAGE):$(TAG) .
-
-rebuild: docker/Dockerfile requirements.txt
-	@echo "[make] rebuilding (no cache) $(IMAGE):$(TAG)"
-	docker build --no-cache -f docker/Dockerfile $(BUILD_ARGS) -t $(IMAGE):$(TAG) .
+	docker build --no-cahce -f docker/Dockerfile $(BUILD_ARGS) -t $(IMAGE):$(TAG) .
 
 pull-base:
 	@echo "[make] pulling base image: $(BASE_IMAGE)"
@@ -101,4 +100,4 @@ fix-perms:
 	  done' 2>/dev/null || true
 
 # nvdla virtual platform commands. only use onder x86
-include nvdla_vp/nvdla_vp.mk
+-include nvdla_vp/nvdla_vp.mk
