@@ -16,6 +16,7 @@ __pycache__/
 # Data & Models（大文件不进 Git，示例小样本可放 data/samples）
 data/calib/
 data/eval/
+data/_cache
 models/engines/
 models/calib/
 models/onnx

@@ -58,3 +58,18 @@ def trt_dtype_to_np(dt):
     except Exception:
         return np.float32
     
+def normalize_shape(s):
+    """
+    Accepts: "1x3x32x32" / "1,3,32,32" / [1,3,32,32] / (1,3,32,32)
+    Returns: (1,3,32,32)
+    """
+    if isinstance(s, (list, tuple)):
+        if len(s) != 4: raise ValueError(f"input_shape length must be 4, got {len(s)}: {s}")
+        return tuple(int(x) for x in s)
+    if isinstance(s, str):
+        t = s.lower().replace(",", "x").strip()
+        parts = [p for p in t.split("x") if p]
+        if len(parts) != 4:
+            raise ValueError(f"input_shape must have 4 dims, got: {s}")
+        return tuple(int(p) for p in parts)
+    raise TypeError(f"Unsupported input_shape type: {type(s)}")

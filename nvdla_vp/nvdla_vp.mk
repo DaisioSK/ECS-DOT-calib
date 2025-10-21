@@ -1,5 +1,5 @@
 # ----------- Config ---------------
-include nvdla_vp.config
+include $(dir $(lastword $(MAKEFILE_LIST)))nvdla_vp.config
 # MODEL_NAME=lenet
 # NVDLA_VER=nv_small
 # VP_IMG_NAME=nvdla-vp

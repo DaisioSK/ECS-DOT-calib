@@ -1,0 +1,37 @@
+project:
+  name: lenet-test
+
+model:
+  format: caffe
+  params:
+    prototxt: models/caffe/lenet.prototxt
+    caffemodel: models/caffe/lenet.caffemodel
+    input_name: data            # Caffe 输入 blob 名
+    input_shape: 1x1x28x28      # DLA 需静态
+    mean: [103.53, 116.28, 123.675]   # 可选：预处理
+    std:  [57.375, 57.12, 58.395]     # 可选
+    bgr:  true                         # 可选：通道顺序
+    workspace_mb: 1024
+
+calibration:
+  algo: minmax            # minmax | entropy
+  data: 
+    format: npz
+    path: data/calib/lenet_mnist_calib.npz
+    source: mnist
+  max_batches: null
+  force: false
+  sanity_n: 0
+  verbose: false
+
+build:
+  engine_out: models/engines
+  calib_out: models/calib
+
+eval:
+  data: 
+    format: npz
+    path: data/eval/lenet_mnist_eval.npz
+    source: mnist
+  batch_size: 32
+  outdir: reports

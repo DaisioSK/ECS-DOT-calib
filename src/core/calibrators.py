@@ -18,7 +18,9 @@ class _BaseNPZCalibrator:
         self.in_dtype_np = np.dtype(in_dtype_np)
         self.verbose = bool(verbose)
 
-        arr = np.load(npz_path)["imgs"]
+        z = np.load(npz_path)
+        key = "imgs" if "imgs" in z.files else "images"
+        arr = z[key]
         if arr.ndim != 4:
             raise ValueError(f"npz imgs must be [N,C,H,W], got {arr.shape}")
         
